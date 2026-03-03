@@ -1,11 +1,5 @@
 <template>
-  <!-- o :style aplica estilos dinamicamente -->
-  <div class="box has-text-weight-bold" :style="estilos">
-    <!--
-      O slot é um recurso do Vue que permite que o conteúdo seja inserido dentro de um componente, 
-      tornando-o mais flexível e reutilizável. Ele é especialmente útil quando queremos criar componentes 
-      genéricos que podem ser personalizados com diferentes conteúdos em diferentes contextos.
-    -->
+  <div class="box has-text-weight-bold app-box">
     <slot></slot>
   </div>
 </template>
@@ -14,13 +8,16 @@
 import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: 'AppBox',
-  data () {
-    return {
-      estilos: {
-        backgroundColor: '#FAF0CA'
-      }
-    }
-  }
+  name: 'AppBox'
 })
 </script>
+
+<style scoped>
+.app-box {
+  background-color: var(--bg-box);
+  color: var(--texto-primario);
+  border: 1px solid var(--borda-box);
+  border-left: 4px solid var(--botao-primario);
+  box-shadow: none;
+}
+</style>

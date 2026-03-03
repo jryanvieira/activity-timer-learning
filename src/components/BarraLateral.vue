@@ -42,11 +42,26 @@ export default defineComponent({
 <style scoped>
 header {
   padding: 1rem;
-  background: #0d3b66;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-borda);
   width: 100%;
   height: 100vh;
   text-align: center;
 }
+
+.button {
+  background-color: var(--botao-primario);
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  font-weight: 700;
+}
+
+.button:hover {
+  background-color: var(--botao-primario-hover);
+  color: #fff;
+}
+
 @media only screen and (max-width: 768px) {
   header {
     padding: 2.5rem;

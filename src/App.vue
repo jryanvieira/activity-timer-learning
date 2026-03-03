@@ -61,16 +61,42 @@ export default defineComponent({
   padding: 1.25rem;
 }
 
-/* Variáveis CSS para temas claro e escuro */
+/* Modo claro - estilo Twitter */
 main {
-  --bg-primario: #fff;
-  --texto-primario: #000;
+  --bg-primario: #ffffff;
+  --bg-box: #ffffff;
+  --bg-box-alt: #f7f9f9;
+  --borda-box: #eff3f4;
+  --texto-primario: #0f1419;
+  --texto-secundario: #536471;
+  --sidebar-bg: #ffffff;
+  --sidebar-borda: #eff3f4;
+  --botao-primario: #1d9bf0;
+  --botao-primario-hover: #1a8cd8;
+  --botao-secundario: #e7e7e7;
+  --botao-secundario-texto: #0f1419;
+  background-color: var(--bg-primario);
+  min-height: 100vh;
 }
+
+/* Modo escuro - azul escuro quase preto */
 main.modo-escuro {
-  --bg-primario: #2b2d42;
-  --texto-primario: #ddd;
+  --bg-primario: #090f1a;
+  --bg-box: #162133;
+  --bg-box-alt: #1b2b43;
+  --borda-box: #2f4f75;
+  --texto-primario: #e7efff;
+  --texto-secundario: #aac2e6;
+  --sidebar-bg: #0b1422;
+  --sidebar-borda: #1e3354;
+  --botao-primario: #3f7ad1;
+  --botao-primario-hover: #5a91df;
+  --botao-secundario: #223754;
+  --botao-secundario-texto: #e7efff;
 }
+
 .conteudo {
   background-color: var(--bg-primario);
+  min-height: 100vh;
 }
 </style>

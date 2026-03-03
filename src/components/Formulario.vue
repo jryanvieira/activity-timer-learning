@@ -48,9 +48,20 @@ export default defineComponent({
 });
 </script>
 <style>
-/* utilizando variavel do css */
 .formulario {
   color: var(--texto-primario);
+  background-color: var(--bg-box);
+  border: 1px solid var(--borda-box);
+  box-shadow: none;
+}
+
+.formulario .input {
   background-color: var(--bg-primario);
+  color: var(--texto-primario);
+  border-color: var(--borda-box);
+}
+
+.formulario .input::placeholder {
+  color: var(--texto-secundario);
 }
 </style>

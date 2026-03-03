@@ -1,13 +1,13 @@
 <template>
   <div class="is-flex is-align-items-center is-justify-content-space-between">
     <Cronometro :tempoEmSegundos="tempoEmSegundos" />
-    <button class="button is-success" @click="iniciar" :disabled="cronometroRodando">
+    <button class="button botao-iniciar" @click="iniciar" :disabled="cronometroRodando">
       <span class="icon">
         <i class="fas fa-play"></i>
       </span>
       <span>Iniciar</span>
     </button>
-    <button class="button is-danger" @click="finalizar" :disabled="!cronometroRodando">
+    <button class="button botao-finalizar" @click="finalizar" :disabled="!cronometroRodando">
       <span class="icon">
         <i class="fas fa-stop"></i>
       </span>
@@ -51,3 +51,29 @@ export default defineComponent({
   }
 });
 </script>
+
+<style scoped>
+.botao-iniciar {
+  background-color: var(--botao-primario);
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  font-weight: 700;
+}
+
+.botao-iniciar:hover:not(:disabled) {
+  background-color: var(--botao-primario-hover);
+}
+
+.botao-finalizar {
+  background-color: var(--botao-secundario);
+  color: var(--botao-secundario-texto);
+  border: 1px solid var(--borda-box);
+  border-radius: 9999px;
+  font-weight: 700;
+}
+
+.botao-finalizar:hover:not(:disabled) {
+  background-color: var(--bg-box-alt);
+}
+</style>
