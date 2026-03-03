@@ -1,4 +1,4 @@
-# alura-tracker
+# tempo-tracker
 
 ## Project setup
 ```
