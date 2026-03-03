@@ -1,5 +1,9 @@
 # tempo-tracker
 
+## Descrição
+
+Projeto criado aprendendo conceitos de vue em um curso da Alura
+
 ## Project setup
 ```
 npm install
