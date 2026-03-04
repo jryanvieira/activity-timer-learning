@@ -10,30 +10,53 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, computed } from 'vue'
+import { useTarefasStore } from '../stores/tarefas'
 
+// ---------------------------------------------------------------
+// DIFERENÇA — SUBSTITUINDO EMIT POR ACESSO DIRETO À STORE
+// ---------------------------------------------------------------
+// ANTES (sem store):
+//   O componente guardava modoEscuroAtivo localmente e emitia
+//   @aoTemaAlterado para que o App.vue tratasse a mudança.
+//   Isso exigia prop-drilling / event bubbling entre componentes.
+//
+// COM PINIA:
+//   O componente acessa a store diretamente e chama a action
+//   trocarTema(). O App.vue reage automaticamente porque lê
+//   o mesmo estado reativo da store via storeToRefs.
+//   Resultado: menos acoplamento, sem eventos intermediários.
+// ---------------------------------------------------------------
+//
+// NOTA SOBRE COMPOSITION API vs OPTIONS API:
+//   Pinia se integra mais naturalmente com a Composition API pura.
+//   Misturar setup() com computed/methods do Options API funciona,
+//   mas é mais propenso a erros. Prefira usar toda a lógica dentro
+//   de setup() para evitar inconsistências de contexto (this).
+// ---------------------------------------------------------------
 export default defineComponent({
   name: 'BarraLateral',
-  emits: ['aoTemaAlterado'],
-  data () {
+  // 'emits' foi removido — não precisamos mais emitir eventos para o pai
+  setup() {
+    const store = useTarefasStore()
+
+    // computed dentro de setup() para evitar dependência de 'this'
+    // Em Vuex seria: computed: { ...mapState(['modoEscuroAtivo']) }
+    // Em Pinia: usamos computed() diretamente com acesso ao store reativo
+    const textoBotao = computed(() =>
+      store.modoEscuroAtivo ? 'Desativar modo escuro' : 'Ativar modo escuro'
+    )
+
+    // Função que chama a action diretamente — sem this.$emit()
+    // Em Vuex seria: this.$store.dispatch('trocarTema')
+    // Em Pinia: store.trocarTema() — chamada direta, sem dispatch()
+    function alterarTema() {
+      store.trocarTema()
+    }
+
     return {
-      modoEscuroAtivo: false
-    }
-  },
-  computed: {
-    // texto do botão de acordo com o tema
-    textoBotao () {
-      if (this.modoEscuroAtivo) {
-        return 'Desativar modo escuro'
-      }
-      return 'Ativar modo escuro'
-    }
-  },
-  methods: {
-    alterarTema () {
-      // alternar o tema, fazendo o emit lá para o app.vue
-      this.modoEscuroAtivo = !this.modoEscuroAtivo
-      this.$emit('aoTemaAlterado', this.modoEscuroAtivo)
+      textoBotao,
+      alterarTema
     }
   }
 })

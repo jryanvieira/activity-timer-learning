@@ -1,13 +1,30 @@
 <template>
+  <!--
+    DIFERENÇA — SEM EVENTOS ENTRE COMPONENTES
+    ---------------------------------------------------------------
+    ANTES (sem store):
+      BarraLateral emitia @aoTemaAlterado e Formulario emitia @aoSalvarTarefa.
+      App.vue precisava capturar esses eventos e passar dados entre componentes.
+
+    COM PINIA:
+      Cada componente acessa a store diretamente para ler e alterar o estado.
+      App.vue só precisa LER o estado da store — sem ouvir eventos,
+      sem métodos de bridge, sem prop-drilling.
+    ---------------------------------------------------------------
+  -->
+
   <!-- utilizando a diretiva v-bind para aplicar uma classe condicionalmente -->
+  <!-- modoEscuroAtivo agora vem diretamente da store via storeToRefs -->
   <main class="columns is-gapless is-multiline" :class="{ 'modo-escuro': modoEscuroAtivo }">
     <div class="column is-one-quarter">
-      <!-- escutando o método para alterar o tema-->
-      <BarraLateral @aoTemaAlterado="trocarTema"/>
+      <!-- BarraLateral não precisa mais emitir eventos — altera a store diretamente -->
+      <BarraLateral />
     </div>
     <div class="column is-three-quarter conteudo">
-      <Formulario @aoSalvarTarefa="salvarTarefa"/>
+      <!-- Formulario não precisa mais emitir eventos — salva na store diretamente -->
+      <Formulario />
       <div class="lista">
+        <!-- tarefas vem diretamente da store via storeToRefs -->
         <Tarefa v-for="(tarefa, index) in tarefas" :key="index" :tarefa="tarefa"/>
         <Box v-if="listaEstaVazia">
           Nenhuma tarefa iniciada, que tal começar uma agora? :)
@@ -19,12 +36,26 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
+import { storeToRefs } from 'pinia';
 import BarraLateral from './components/BarraLateral.vue'
 import Formulario from './components/Formulario.vue'
 import Tarefa from './components/Tarefa.vue'
 import Box from './components/Box.vue'
-import ITarefa from './interfaces/ITarefa'
+import { useTarefasStore } from './stores/tarefas'
 
+// ---------------------------------------------------------------
+// DIFERENÇA — COMO USAR NO Options API vs Composition API
+// ---------------------------------------------------------------
+// VUEX com Options API:
+//   computed: { ...mapState(['tarefas']), ...mapGetters(['listaEstaVazia']) }
+//   methods: { ...mapActions(['salvarTarefa']) }
+//
+// PINIA com Options API:
+//   setup() retorna os dados da store reativos.
+//   storeToRefs() converte state e getters em refs reativas para
+//   desestruturação segura — sem perder a reatividade.
+//   Actions são funções normais e não precisam de storeToRefs.
+// ---------------------------------------------------------------
 export default defineComponent({
   name: 'App',
   components: {
@@ -33,24 +64,25 @@ export default defineComponent({
     Tarefa,
     Box
   },
-  data () {
+  setup() {
+    const store = useTarefasStore()
+
+    // storeToRefs garante que tarefas, modoEscuroAtivo e listaEstaVazia
+    // sejam refs reativas mesmo após desestruturação.
+    // Sem storeToRefs, a desestruturação quebraria a reatividade:
+    //   const { tarefas } = store  ← NÃO reativo! (perde reatividade)
+    //   const { tarefas } = storeToRefs(store)  ← reativo ✓
+    //
+    // storeToRefs NÃO deve ser usado para actions (funções),
+    // só para state e getters. Actions podem ser acessadas direto: store.acao()
+    const { tarefas, modoEscuroAtivo, listaEstaVazia } = storeToRefs(store)
+
+    // Retorna as refs para o template — sem precisar de data() ou computed
+    // Em Vuex seria: computed: { ...mapState(['tarefas']), ...mapGetters(['listaEstaVazia']) }
     return {
-      tarefas: [] as ITarefa[],
-      modoEscuroAtivo: false
-    }
-  },
-  computed: {
-    listaEstaVazia () : boolean {
-      return this.tarefas.length === 0
-    }
-  },
-  methods: {
-    salvarTarefa (tarefa: ITarefa) {
-      this.tarefas.push(tarefa)
-    },
-    // funcao para alterar o tema, recebendo o valor do tema do componente barra lateral
-    trocarTema (modoEscuroAtivo: boolean) {
-      this.modoEscuroAtivo = modoEscuroAtivo
+      tarefas,
+      modoEscuroAtivo,
+      listaEstaVazia
     }
   }
 });
