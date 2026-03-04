@@ -2,45 +2,54 @@
 // STORE DE TAREFAS COM PINIA
 // ============================================================
 //
-// DIFERENÇA #1 — CRIAÇÃO DA STORE
+// DIFERENÇA #1 — CRIAÇÃO DO ESTADO CENTRALIZADO
 // ---------------------------------------------------------------
-// VUEX:
-//   export default createStore({
-//     state: { ... },
-//     mutations: { ... },
-//     actions: { ... },
-//     getters: { ... }
-//   })
+// ANTES (local state + emit):
+//   Não havia um lugar central para o estado. Cada componente
+//   guardava seu próprio pedaço de estado com data() e avisava
+//   o pai via $emit quando algo mudava:
 //
-// PINIA:
-//   Usa a função defineStore() com um ID único (string).
-//   Não existe separação entre mutations e actions — tudo é action.
-//   Não existe o conceito de "modules" aninhados; cada store já
-//   é um módulo independente com seu próprio ID.
+//   // BarraLateral.vue
+//   data() { return { modoEscuroAtivo: false } }
+//   this.$emit('aoTemaAlterado', this.modoEscuroAtivo)
+//
+//   // App.vue ouvia e armazenava tudo:
+//   data() { return { tarefas: [], modoEscuroAtivo: false } }
+//   methods: { trocarTema(val) { this.modoEscuroAtivo = val } }
+//
+// COM PINIA:
+//   O estado vive em um único lugar — a store. Qualquer componente
+//   pode ler ou alterar diretamente, sem precisar de emit/props.
+//   defineStore() cria essa store com um ID único (string).
 // ---------------------------------------------------------------
 
 import { defineStore } from 'pinia'
 import ITarefa from '../interfaces/ITarefa'
 
 // defineStore recebe dois argumentos:
-//   1) ID único da store (string) — equivale ao "namespace" do Vuex.
+//   1) ID único da store (string) — nome que identifica esta store.
 //   2) Objeto de opções com state, getters e actions.
 export const useTarefasStore = defineStore('tarefas', {
 
   // ---------------------------------------------------------------
   // DIFERENÇA #2 — STATE
   // ---------------------------------------------------------------
-  // VUEX:
-  //   state: {
-  //     tarefas: [] as ITarefa[],
-  //     modoEscuroAtivo: false
+  // ANTES (local state + emit):
+  //   O estado ficava espalhado: cada componente tinha seu data().
+  //   App.vue centralizava manualmente ouvindo eventos dos filhos:
+  //
+  //   // App.vue
+  //   data() {
+  //     return {
+  //       tarefas: [] as ITarefa[],   // acumulado via @aoSalvarTarefa
+  //       modoEscuroAtivo: false      // atualizado via @aoTemaAlterado
+  //     }
   //   }
   //
-  // PINIA:
-  //   state deve ser uma FUNÇÃO que retorna o objeto.
-  //   Isso garante que cada instância da store tenha seu próprio
-  //   estado isolado (importante para SSR).
-  //   O TypeScript infere os tipos automaticamente do valor retornado.
+  // COM PINIA:
+  //   O estado fica aqui, na store. É uma função que retorna o objeto
+  //   — isso garante que cada instância tenha estado isolado (SSR).
+  //   Qualquer componente acessa diretamente: store.tarefas
   // ---------------------------------------------------------------
   state: () => ({
     tarefas: [] as ITarefa[],
@@ -48,53 +57,58 @@ export const useTarefasStore = defineStore('tarefas', {
   }),
 
   // ---------------------------------------------------------------
-  // DIFERENÇA #3 — GETTERS
+  // DIFERENÇA #3 — GETTERS (valores derivados do estado)
   // ---------------------------------------------------------------
-  // VUEX:
-  //   getters: {
-  //     listaEstaVazia: (state) => state.tarefas.length === 0
+  // ANTES (local state + emit):
+  //   Valores derivados eram computed() locais em cada componente
+  //   que precisasse deles. Se dois componentes precisassem do mesmo
+  //   valor derivado, a lógica era duplicada:
+  //
+  //   // App.vue
+  //   computed: {
+  //     listaEstaVazia() { return this.tarefas.length === 0 }
   //   }
   //
-  // PINIA:
-  //   Getters são idênticos conceitualmente, mas o acesso a OUTROS
-  //   getters é feito via "this" em vez de receber "getters" como
-  //   segundo argumento, o que é mais natural e limpo.
+  // COM PINIA:
+  //   Getters ficam na store e são compartilhados por todos.
+  //   Acesso direto: store.listaEstaVazia (sem chamar como função)
   // ---------------------------------------------------------------
   getters: {
     listaEstaVazia: (state): boolean => state.tarefas.length === 0
   },
 
   // ---------------------------------------------------------------
-  // DIFERENÇA #4 — ACTIONS (sem mutations!)
+  // DIFERENÇA #4 — ACTIONS (como o estado é alterado)
   // ---------------------------------------------------------------
-  // VUEX:
-  //   Para alterar o state era OBRIGATÓRIO passar por uma mutation
-  //   síncrona. Actions só podiam chamar mutations, nunca alterar
-  //   o state diretamente:
+  // ANTES (local state + emit):
+  //   Para alterar o estado de outro componente era preciso:
+  //   1. Filho emite um evento com $emit
+  //   2. Pai escuta o evento no template (@evento="método")
+  //   3. Pai executa um método que altera seu próprio data()
   //
-  //   mutations: {
-  //     ADICIONAR_TAREFA(state, tarefa) { state.tarefas.push(tarefa) }
-  //   },
-  //   actions: {
-  //     salvarTarefa({ commit }, tarefa) { commit('ADICIONAR_TAREFA', tarefa) }
-  //   }
+  //   // Formulario.vue
+  //   this.$emit('aoSalvarTarefa', { duracaoEmSegundos, descricao })
   //
-  // PINIA:
-  //   NÃO EXISTEM MUTATIONS. As actions alteram o state diretamente
-  //   via "this". Podem ser síncronas ou assíncronas (async/await)
-  //   sem distinção. O código fica muito mais simples e direto.
+  //   // App.vue template
+  //   <Formulario @aoSalvarTarefa="salvarTarefa" />
+  //
+  //   // App.vue methods
+  //   salvarTarefa(tarefa) { this.tarefas.push(tarefa) }
+  //
+  // COM PINIA:
+  //   Qualquer componente chama a action diretamente na store.
+  //   Sem emit, sem ouvir evento no pai, sem método intermediário.
   // ---------------------------------------------------------------
   actions: {
-    // Adiciona uma nova tarefa à lista
+    // Qualquer componente pode chamar store.salvarTarefa(tarefa)
+    // sem precisar emitir evento e sem que o App.vue precise ouvir nada
     salvarTarefa(tarefa: ITarefa) {
-      // Em Pinia, acessa-se o state diretamente via "this"
-      // Em Vuex seria: state.tarefas.push(tarefa) dentro de uma mutation
       this.tarefas.push(tarefa)
     },
 
-    // Alterna entre modo claro e escuro
+    // Qualquer componente pode chamar store.trocarTema()
+    // sem precisar emitir evento para o App.vue
     trocarTema() {
-      // Mutação direta do state — sem necessidade de commit()
       this.modoEscuroAtivo = !this.modoEscuroAtivo
     }
   }
@@ -103,20 +117,21 @@ export const useTarefasStore = defineStore('tarefas', {
 // ---------------------------------------------------------------
 // DIFERENÇA #5 — COMO USAR NOS COMPONENTES
 // ---------------------------------------------------------------
-// VUEX:
-//   import { useStore } from 'vuex'
-//   const store = useStore()
-//   store.state.tarefas          // state
-//   store.getters.listaEstaVazia // getter
-//   store.commit('MUTACAO')      // mutation
-//   store.dispatch('action')     // action
+// ANTES (local state + emit):
+//   Cada componente só conhecia seu próprio estado (data).
+//   Para compartilhar dados, usava props (pai → filho)
+//   e eventos (filho → pai). Quanto mais componentes, mais
+//   difícil de rastrear quem alterou o quê.
 //
-// PINIA:
+// COM PINIA:
 //   import { useTarefasStore } from '@/stores/tarefas'
 //   const store = useTarefasStore()
-//   store.tarefas                // state (acesso direto!)
-//   store.listaEstaVazia         // getter (acesso direto!)
-//   store.salvarTarefa(tarefa)   // action (chamada direta!)
+//   store.tarefas                // lê o estado diretamente
+//   store.listaEstaVazia         // lê um getter diretamente
+//   store.salvarTarefa(tarefa)   // chama uma action diretamente
+//
+//   Para reatividade com desestruturação, use storeToRefs():
+//   const { tarefas } = storeToRefs(store)  ← mantém reatividade ✓
 //
 // Para reatividade com desestruturação, use storeToRefs():
 //   import { storeToRefs } from 'pinia'

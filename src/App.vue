@@ -1,15 +1,26 @@
 <template>
   <!--
-    DIFERENÇA — SEM EVENTOS ENTRE COMPONENTES
+    DIFERENÇA — APP.VUE ANTES ERA O "GERENCIADOR MANUAL" DE ESTADO
     ---------------------------------------------------------------
-    ANTES (sem store):
-      BarraLateral emitia @aoTemaAlterado e Formulario emitia @aoSalvarTarefa.
-      App.vue precisava capturar esses eventos e passar dados entre componentes.
+    ANTES (local state + emit):
+      App.vue era o centro de tudo: guardava tarefas[] e modoEscuroAtivo
+      no seu próprio data(), e ouvia eventos dos filhos para atualizá-los:
+
+      <BarraLateral @aoTemaAlterado="trocarTema" />
+      <Formulario   @aoSalvarTarefa="salvarTarefa" />
+
+      methods: {
+        trocarTema(val)   { this.modoEscuroAtivo = val },
+        salvarTarefa(t)   { this.tarefas.push(t) }
+      }
+
+      Todo novo componente que precisasse desses dados dependia de
+      App.vue como intermediário — acoplamento alto.
 
     COM PINIA:
-      Cada componente acessa a store diretamente para ler e alterar o estado.
-      App.vue só precisa LER o estado da store — sem ouvir eventos,
-      sem métodos de bridge, sem prop-drilling.
+      App.vue só LEIA o estado da store. Os filhos alteram a store
+      diretamente. App.vue não precisa ouvir nenhum evento nem ter
+      métodos de bridge — apenas reflete o que está na store.
     ---------------------------------------------------------------
   -->
 
@@ -44,17 +55,23 @@ import Box from './components/Box.vue'
 import { useTarefasStore } from './stores/tarefas'
 
 // ---------------------------------------------------------------
-// DIFERENÇA — COMO USAR NO Options API vs Composition API
+// DIFERENÇA — COMO APP.VUE ACESSAVA O ESTADO
 // ---------------------------------------------------------------
-// VUEX com Options API:
-//   computed: { ...mapState(['tarefas']), ...mapGetters(['listaEstaVazia']) }
-//   methods: { ...mapActions(['salvarTarefa']) }
+// ANTES (local state + emit):
+//   O estado era declarado diretamente no data() do App.vue.
+//   Computed derivavam desse data local. Não havia store:
 //
-// PINIA com Options API:
-//   setup() retorna os dados da store reativos.
-//   storeToRefs() converte state e getters em refs reativas para
-//   desestruturação segura — sem perder a reatividade.
-//   Actions são funções normais e não precisam de storeToRefs.
+//   data()    { return { tarefas: [], modoEscuroAtivo: false } }
+//   computed: { listaEstaVazia() { return this.tarefas.length === 0 } }
+//
+// COM PINIA:
+//   O estado vem da store. Usamos setup() + storeToRefs() para
+//   expor o estado ao template de forma reativa.
+//   storeToRefs() converte state/getters em refs reativas para que
+//   a desestruturação não quebre a reatividade:
+//     const { tarefas } = store             ← NÃO reativo!
+//     const { tarefas } = storeToRefs(store) ← reativo ✓
+//   Actions não precisam de storeToRefs (são funções, não estado).
 // ---------------------------------------------------------------
 export default defineComponent({
   name: 'App',
@@ -67,18 +84,17 @@ export default defineComponent({
   setup() {
     const store = useTarefasStore()
 
-    // storeToRefs garante que tarefas, modoEscuroAtivo e listaEstaVazia
-    // sejam refs reativas mesmo após desestruturação.
-    // Sem storeToRefs, a desestruturação quebraria a reatividade:
-    //   const { tarefas } = store  ← NÃO reativo! (perde reatividade)
-    //   const { tarefas } = storeToRefs(store)  ← reativo ✓
+    // storeToRefs converte state e getters da store em refs reativas.
+    // Necessário ao desestruturar — sem ele, os valores perdem reatividade:
+    //   const { tarefas } = store              ← valor estático, não atualiza!
+    //   const { tarefas } = storeToRefs(store) ← ref reativa, atualiza ✓
     //
-    // storeToRefs NÃO deve ser usado para actions (funções),
-    // só para state e getters. Actions podem ser acessadas direto: store.acao()
+    // storeToRefs NÃO deve ser usado para actions (são funções, não estado).
     const { tarefas, modoEscuroAtivo, listaEstaVazia } = storeToRefs(store)
 
-    // Retorna as refs para o template — sem precisar de data() ou computed
-    // Em Vuex seria: computed: { ...mapState(['tarefas']), ...mapGetters(['listaEstaVazia']) }
+    // ANTES: esses valores viviam no data() do App.vue e eram atualizados
+    // por métodos locais que ouviam $emit dos filhos.
+    // AGORA: vêm da store — App.vue só lê, os filhos alteram diretamente.
     return {
       tarefas,
       modoEscuroAtivo,

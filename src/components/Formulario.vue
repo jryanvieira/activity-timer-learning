@@ -27,17 +27,32 @@ import { useTarefasStore } from '../stores/tarefas'
 import Temporizador from './Temporizador.vue'
 
 // ---------------------------------------------------------------
-// DIFERENÇA — SUBSTITUINDO EMIT POR ACTION DA STORE
+// DIFERENÇA — SUBSTITUINDO $EMIT POR ACTION DA STORE
 // ---------------------------------------------------------------
-// ANTES (sem store):
-//   Formulario emitia @aoSalvarTarefa com os dados da tarefa.
-//   App.vue ouvia esse evento e chamava salvarTarefa() localmente.
-//   Cada componente pai precisava saber da existência desse evento.
+// ANTES (local state + emit):
+//   Ao finalizar uma tarefa, este componente emitia um evento
+//   com os dados para o pai (App.vue) tratar:
+//
+//   emits: ['aoSalvarTarefa'],
+//
+//   methods: {
+//     finalizarTarefa(tempoDecorrido) {
+//       this.$emit('aoSalvarTarefa', {         // ← envia ao pai
+//         duracaoEmSegundos: tempoDecorrido,
+//         descricao: this.descricao
+//       })
+//     }
+//   }
+//
+//   E o App.vue precisava escutar e salvar:
+//   <Formulario @aoSalvarTarefa="salvarTarefa" />
+//   methods: { salvarTarefa(t) { this.tarefas.push(t) } }
 //
 // COM PINIA:
-//   Formulario chama store.salvarTarefa() diretamente.
-//   Nenhum componente pai precisa lidar com o evento.
-//   Isso elimina o acoplamento entre Formulario e App.
+//   Este componente salva na store diretamente.
+//   App.vue não precisa mais saber que Formulario existe.
+//   A lista de tarefas no template do App.vue atualiza sozinha
+//   porque lê o mesmo estado reativo da store.
 // ---------------------------------------------------------------
 export default defineComponent({
   name: "TarefaFormulario",
@@ -45,18 +60,15 @@ export default defineComponent({
   components: {
     Temporizador
   },
-  // ---------------------------------------------------------------
-  // NOTA: usar setup() para instanciar a store é a prática recomendada.
-  // Chamar useTarefasStore() dentro de um method() também funciona no
-  // Pinia 2, mas instanciar na setup() e retornar ao componente é
-  // mais limpo, consistente e alinhado com a Composition API.
-  // ---------------------------------------------------------------
   setup() {
+    // A store é instanciada aqui no setup() e exposta ao componente.
+    // Isso permite que os methods do Options API acessem via this.store.
+    // Instanciar no setup() é a prática recomendada — garante que o Pinia
+    // já está ativo quando o componente é criado.
     const store = useTarefasStore()
-
-    // Expõe store para o componente para que methods possam acessar via this.store
     return { store }
   },
+  // ANTES: emits: ['aoSalvarTarefa'] estava declarado aqui.
   data () {
     return {
       descricao: ''
@@ -64,9 +76,9 @@ export default defineComponent({
   },
   methods: {
     finalizarTarefa (tempoDecorrido: number) : void {
-      // Acessa a store via this.store (exposta pelo setup)
-      // VUEX seria: this.$store.dispatch('salvarTarefa', { ... })
-      // PINIA é:    this.store.salvarTarefa({ ... }) — chamada direta, sem dispatch()
+      // ANTES: this.$emit('aoSalvarTarefa', { duracaoEmSegundos, descricao })
+      //        App.vue ouvia e chamava this.tarefas.push(tarefa)
+      // AGORA: salva diretamente na store — App.vue atualiza sozinho
       this.store.salvarTarefa({
         duracaoEmSegundos: tempoDecorrido,
         descricao: this.descricao

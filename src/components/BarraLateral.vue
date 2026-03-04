@@ -14,25 +14,29 @@ import { defineComponent, computed } from 'vue'
 import { useTarefasStore } from '../stores/tarefas'
 
 // ---------------------------------------------------------------
-// DIFERENÇA — SUBSTITUINDO EMIT POR ACESSO DIRETO À STORE
+// DIFERENÇA — SUBSTITUINDO $EMIT POR ACTION DA STORE
 // ---------------------------------------------------------------
-// ANTES (sem store):
-//   O componente guardava modoEscuroAtivo localmente e emitia
-//   @aoTemaAlterado para que o App.vue tratasse a mudança.
-//   Isso exigia prop-drilling / event bubbling entre componentes.
+// ANTES (local state + emit):
+//   modoEscuroAtivo vivia no data() deste componente.
+//   Para avisar o App.vue da mudança, era preciso emitir um evento:
+//
+//   data() { return { modoEscuroAtivo: false } }
+//
+//   methods: {
+//     alterarTema() {
+//       this.modoEscuroAtivo = !this.modoEscuroAtivo
+//       this.$emit('aoTemaAlterado', this.modoEscuroAtivo)  // ← avisa o pai
+//     }
+//   }
+//
+//   E o App.vue precisava escutar:
+//   <BarraLateral @aoTemaAlterado="trocarTema" />
 //
 // COM PINIA:
-//   O componente acessa a store diretamente e chama a action
-//   trocarTema(). O App.vue reage automaticamente porque lê
-//   o mesmo estado reativo da store via storeToRefs.
-//   Resultado: menos acoplamento, sem eventos intermediários.
-// ---------------------------------------------------------------
-//
-// NOTA SOBRE COMPOSITION API vs OPTIONS API:
-//   Pinia se integra mais naturalmente com a Composition API pura.
-//   Misturar setup() com computed/methods do Options API funciona,
-//   mas é mais propenso a erros. Prefira usar toda a lógica dentro
-//   de setup() para evitar inconsistências de contexto (this).
+//   modoEscuroAtivo vive na store, não mais aqui.
+//   Chamamos store.trocarTema() e todos os componentes que leem
+//   esse estado da store (como App.vue) atualizam automaticamente.
+//   Sem $emit, sem escutar evento no pai.
 // ---------------------------------------------------------------
 export default defineComponent({
   name: 'BarraLateral',
@@ -40,16 +44,17 @@ export default defineComponent({
   setup() {
     const store = useTarefasStore()
 
-    // computed dentro de setup() para evitar dependência de 'this'
-    // Em Vuex seria: computed: { ...mapState(['modoEscuroAtivo']) }
-    // Em Pinia: usamos computed() diretamente com acesso ao store reativo
+    // ANTES: textoBotao era um computed local que lia this.modoEscuroAtivo do data().
+    // AGORA: lê store.modoEscuroAtivo — o mesmo valor que o App.vue usa para
+    // aplicar o tema, garantindo consistência sem precisar de props ou eventos.
     const textoBotao = computed(() =>
       store.modoEscuroAtivo ? 'Desativar modo escuro' : 'Ativar modo escuro'
     )
 
-    // Função que chama a action diretamente — sem this.$emit()
-    // Em Vuex seria: this.$store.dispatch('trocarTema')
-    // Em Pinia: store.trocarTema() — chamada direta, sem dispatch()
+    // ANTES: alterarTema() alternava this.modoEscuroAtivo local e emitia
+    // $emit('aoTemaAlterado', valor) para o App.vue tratar.
+    // AGORA: chama store.trocarTema() — a store atualiza e todos os
+    // componentes que leem esse estado reagem automaticamente.
     function alterarTema() {
       store.trocarTema()
     }
